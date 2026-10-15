@@ -418,7 +418,7 @@
             <div class="bg-brand-yellow p-4 border-b border-yellow-300 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-star text-brand-orangeDark text-xl"></i>
-                    <h3 class="font-extrabold text-brand-dark text-lg">Pesanan Kamu Tercatat!</h3>
+                    <h3 class="font-extrabold text-brand-dark text-lg">Satu Langkah Lagi!</h3>
                 </div>
                 <button type="button" onclick="closeReviewModal()" aria-label="Tutup" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white text-gray-700 flex items-center justify-center font-bold">
                     <i class="fa-solid fa-xmark"></i>
@@ -428,12 +428,12 @@
             <div id="reviewBody" class="p-5 overflow-y-auto space-y-4">
                 <div>
                     <p class="text-sm font-bold text-brand-dark">Makasih ya, <span id="reviewName">kak</span>! 😋</p>
-                    <p class="text-xs text-gray-600 mt-1">Lanjutkan pesanan lewat WhatsApp. Sambil menunggu, boleh bantu kami dengan kasih penilaian dan masukan? Kami baca semuanya.</p>
+                    <p class="text-xs text-gray-600 mt-1">Sebelum lanjut ke WhatsApp, isi ulasan singkat dulu ya. Bintang wajib diisi, pilihan dan saran boleh dikosongkan. Kami baca semuanya.</p>
                     <p class="text-[11px] text-gray-400 mt-1">No. pesanan: <span id="reviewOrderId" class="font-bold"></span></p>
                 </div>
 
                 <div class="text-center">
-                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark mb-1">Gimana pengalaman pesan di Dimpik? *</p>
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark mb-1">Gimana kesanmu soal Dimpik & cara pesan di website? *</p>
                     <div id="reviewStars" class="flex items-center justify-center gap-1">
                         <button type="button" onclick="setRating(1)" aria-label="1 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
                         <button type="button" onclick="setRating(2)" aria-label="2 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
@@ -466,9 +466,9 @@
                 <p id="reviewError" class="hidden text-xs font-bold text-red-600"></p>
 
                 <div class="flex gap-2">
-                    <button type="button" onclick="closeReviewModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-2xl text-sm transition">Lewati</button>
+                    <button type="button" onclick="closeReviewModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-2xl text-sm transition">Kembali</button>
                     <button type="button" onclick="submitReview()" class="flex-[2] bg-brand-orange hover:bg-brand-orangeDark text-white font-extrabold py-3 rounded-2xl text-sm shadow transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-paper-plane"></i> Kirim Ulasan
+                        <i class="fa-brands fa-whatsapp text-lg"></i> Kirim Ulasan & Lanjut WhatsApp
                     </button>
                 </div>
             </div>
@@ -476,7 +476,7 @@
             <div id="reviewThanks" class="hidden p-10 text-center">
                 <div class="text-5xl mb-2">🙏</div>
                 <p class="font-extrabold text-brand-dark text-lg">Makasih banyak!</p>
-                <p class="text-xs text-gray-600 mt-1">Masukanmu sudah kami terima dan bikin Dimpik makin enak.</p>
+                <p class="text-xs text-gray-600 mt-1">Ulasanmu sudah kami terima. Membuka WhatsApp untuk melanjutkan pesanan...</p>
             </div>
         </div>
     </div>
@@ -811,6 +811,7 @@
 
         // ---------- REVIEW SETELAH PESANAN ----------
         let lastOrder = null;
+        let pendingOrder = null;
         let reviewRating = 0;
         const RATING_TEXT = ['', 'Kurang banget 😞', 'Kurang puas 😕', 'Lumayan 🙂', 'Bagus! 😋', 'Mantap banget! 🤩'];
 
@@ -857,29 +858,38 @@
         }
 
         function submitReview() {
-            if (!lastOrder) { closeReviewModal(); return; }
+            if (!pendingOrder) { closeReviewModal(); return; }
             if (!reviewRating) {
                 const err = document.getElementById('reviewError');
-                err.textContent = 'Pilih jumlah bintang dulu ya.';
+                err.textContent = 'Isi bintang dulu ya sebelum lanjut ke WhatsApp.';
                 err.classList.remove('hidden');
                 return;
             }
+            const o = pendingOrder;
+            pendingOrder = null;
             const tags = Array.from(document.querySelectorAll('#reviewTags .tag-chip[aria-pressed="true"]')).map(b => b.dataset.tag);
+
+            // Order dulu, lalu ulasan (antrean mengirim berurutan)
+            sendToSheet(o.payload);
             sendToSheet({
                 action: 'review',
-                orderId: lastOrder.id,
+                orderId: o.id,
                 rating: reviewRating,
                 tags: tags,
                 komentar: document.getElementById('reviewText').value.trim()
             });
+
+            // Buka WhatsApp langsung dari klik ini (supaya tidak diblokir popup blocker)
+            window.open(o.waUrl, '_blank');
+
             document.getElementById('reviewBody').classList.add('hidden');
             document.getElementById('reviewThanks').classList.remove('hidden');
-            setTimeout(closeReviewModal, 2200);
+            finishOrder();
+            setTimeout(closeReviewModal, 2500);
         }
 
-        // Dipanggil setelah pesanan dikirim: kosongkan keranjang & form, lalu minta review
-        function finishOrder(orderId, custName) {
-            lastOrder = { id: orderId, name: custName };
+        // Dipanggil setelah ulasan terkirim: kosongkan keranjang & form
+        function finishOrder() {
             cart = {};
             updateCartUI();
             renderMenu(getActiveCategory());
@@ -892,7 +902,6 @@
             onDeliveryChange();
 
             document.getElementById('cartModal').classList.add('hidden');
-            openReviewModal();
         }
 
         // SEND WHATSAPP FORMATTED MESSAGE
@@ -944,8 +953,8 @@
             message += `💰 *TOTAL PEMBAYARAN: Rp ${totalPrice.toLocaleString('id-ID')}*\n\n`;
             message += `Mohon konfirmasi pesanan dan info pembayarannya ya kak. Terima kasih! 😋✨`;
 
-            // Kirim pesanan ke Google Sheet (tab "Website")
-            sendToSheet({
+            // Data pesanan ditahan dulu; baru dikirim ke Google Sheet setelah ulasan diisi
+            const orderPayload = {
                 action: 'order',
                 orderId: orderId,
                 nama: custName,
@@ -963,14 +972,15 @@
                         harga: it.price
                     };
                 })
-            });
+            };
 
             const phone = "6287743146842";
             const encodedMessage = encodeURIComponent(message);
             const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
 
-            window.open(waUrl, '_blank');
-            finishOrder(orderId, custName);
+            pendingOrder = { id: orderId, name: custName, payload: orderPayload, waUrl: waUrl };
+            lastOrder = { id: orderId, name: custName };
+            openReviewModal();
         }
 
         function showToast(name) {
