@@ -412,6 +412,75 @@
         </div>
     </div>
 
+    <!-- REVIEW MODAL (muncul setelah pesanan dikirim) -->
+    <div id="reviewModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] modal-pop">
+            <div class="bg-brand-yellow p-4 border-b border-yellow-300 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-star text-brand-orangeDark text-xl"></i>
+                    <h3 class="font-extrabold text-brand-dark text-lg">Pesanan Kamu Tercatat!</h3>
+                </div>
+                <button type="button" onclick="closeReviewModal()" aria-label="Tutup" class="w-8 h-8 rounded-full bg-white/60 hover:bg-white text-gray-700 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="reviewBody" class="p-5 overflow-y-auto space-y-4">
+                <div>
+                    <p class="text-sm font-bold text-brand-dark">Makasih ya, <span id="reviewName">kak</span>! 😋</p>
+                    <p class="text-xs text-gray-600 mt-1">Lanjutkan pesanan lewat WhatsApp. Sambil menunggu, boleh bantu kami dengan kasih penilaian dan masukan? Kami baca semuanya.</p>
+                    <p class="text-[11px] text-gray-400 mt-1">No. pesanan: <span id="reviewOrderId" class="font-bold"></span></p>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark mb-1">Gimana pengalaman pesan di Dimpik? *</p>
+                    <div id="reviewStars" class="flex items-center justify-center gap-1">
+                        <button type="button" onclick="setRating(1)" aria-label="1 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setRating(2)" aria-label="2 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setRating(3)" aria-label="3 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setRating(4)" aria-label="4 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
+                        <button type="button" onclick="setRating(5)" aria-label="5 bintang" class="star-btn text-3xl text-gray-300 hover:text-amber-400 transition"><i class="fa-solid fa-star"></i></button>
+                    </div>
+                    <p id="ratingLabel" class="text-xs font-bold text-gray-500 mt-1 h-4"></p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark mb-2">Ada yang perlu kami perbaiki? <span class="normal-case font-semibold text-gray-400">(boleh pilih lebih dari satu)</span></p>
+                    <div id="reviewTags" class="flex flex-wrap gap-2">
+                        <button type="button" data-tag="Rasa" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Rasa</button>
+                        <button type="button" data-tag="Porsi" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Porsi</button>
+                        <button type="button" data-tag="Harga" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Harga</button>
+                        <button type="button" data-tag="Pilihan Menu" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Pilihan Menu</button>
+                        <button type="button" data-tag="Kemasan" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Kemasan</button>
+                        <button type="button" data-tag="Kecepatan" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Kecepatan</button>
+                        <button type="button" data-tag="Pelayanan" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Pelayanan</button>
+                        <button type="button" data-tag="Website" aria-pressed="false" onclick="toggleTag(this)" class="tag-chip border-2 border-yellow-300 bg-white text-gray-700 text-xs font-bold px-3 py-1.5 rounded-full transition">Website / Cara Pesan</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="reviewText" class="block text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark mb-1">Masukan & saran</label>
+                    <textarea id="reviewText" rows="3" maxlength="800" placeholder="Ceritakan apa yang kurang, menu yang kamu cari, atau saran lainnya..." class="w-full text-xs p-3 rounded-xl border border-yellow-300 focus:ring-2 focus:ring-brand-orange focus:outline-none bg-white font-medium"></textarea>
+                </div>
+
+                <p id="reviewError" class="hidden text-xs font-bold text-red-600"></p>
+
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeReviewModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 rounded-2xl text-sm transition">Lewati</button>
+                    <button type="button" onclick="submitReview()" class="flex-[2] bg-brand-orange hover:bg-brand-orangeDark text-white font-extrabold py-3 rounded-2xl text-sm shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Kirim Ulasan
+                    </button>
+                </div>
+            </div>
+
+            <div id="reviewThanks" class="hidden p-10 text-center">
+                <div class="text-5xl mb-2">🙏</div>
+                <p class="font-extrabold text-brand-dark text-lg">Makasih banyak!</p>
+                <p class="text-xs text-gray-600 mt-1">Masukanmu sudah kami terima dan bikin Dimpik makin enak.</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // MENU DATA STRUCTURE
         const menuData = [
@@ -671,6 +740,161 @@
             modal.classList.toggle('hidden');
         }
 
+        // =====================================================
+        // INTEGRASI GOOGLE SHEET (tab "Website")
+        // Tempel URL Web App dari Google Apps Script di bawah ini.
+        // (Apps Script > Deploy > New deployment > Web app > salin URL yang berakhiran /exec)
+        // =====================================================
+        const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwkxlWUrZsAVtRvvIC-Hxco-EidqLJ0HFLAxdxcNndr7wfg4kLK7OxeXopCP_ZeRGNY/exec';
+
+        const CATEGORY_LABELS = {
+            isi4: 'Dimsum Isi 4', isi6: 'Dimsum Isi 6', isi8: 'Dimsum Isi 8', isi16: 'Dimsum Isi 16',
+            special: 'Udang & Goreng Keju', frozen: 'Dimsum Frozen', addon: 'Add On / Pelengkap'
+        };
+
+        // "Dimsum Mentai (Isi 4)" -> "Dimsum Mentai" (semua ukuran digabung untuk ranking varian)
+        function variantOf(name) {
+            return name.replace(/\s*\(Isi \d+\)\s*$/, '');
+        }
+
+        function makeOrderId() {
+            const d = new Date(), p = n => String(n).padStart(2, '0');
+            return 'DMP-' + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) +
+                '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) +
+                '-' + Math.random().toString(36).slice(2, 5).toUpperCase();
+        }
+
+        // Antrean kirim: data disimpan dulu, lalu dikirim berurutan. Kalau koneksi putus,
+        // data tetap tersimpan di browser dan dikirim ulang saat halaman dibuka / online lagi.
+        const PENDING_KEY = 'dimpik_pending_posts';
+        function loadPending() {
+            try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
+        }
+        function savePending() {
+            try { localStorage.setItem(PENDING_KEY, JSON.stringify(pendingQueue.slice(-30))); } catch (e) {}
+        }
+        let pendingQueue = loadPending();
+        let flushing = false;
+
+        function sendToSheet(data) {
+            if (!SHEET_WEBHOOK_URL) {
+                console.warn('[Dimpik] SHEET_WEBHOOK_URL belum diisi, data tidak dikirim ke Google Sheet.');
+                return;
+            }
+            pendingQueue.push(data);
+            savePending();
+            flushPending();
+        }
+
+        async function flushPending() {
+            if (flushing || !SHEET_WEBHOOK_URL) return;
+            flushing = true;
+            try {
+                while (pendingQueue.length) {
+                    await fetch(SHEET_WEBHOOK_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        keepalive: true,
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(pendingQueue[0])
+                    });
+                    pendingQueue.shift();
+                    savePending();
+                }
+            } catch (e) {
+                // offline: biarkan di antrean, dicoba lagi nanti
+            } finally {
+                flushing = false;
+            }
+        }
+        window.addEventListener('online', flushPending);
+
+        // ---------- REVIEW SETELAH PESANAN ----------
+        let lastOrder = null;
+        let reviewRating = 0;
+        const RATING_TEXT = ['', 'Kurang banget 😞', 'Kurang puas 😕', 'Lumayan 🙂', 'Bagus! 😋', 'Mantap banget! 🤩'];
+
+        function openReviewModal() {
+            reviewRating = 0;
+            setRating(0);
+            document.querySelectorAll('#reviewTags .tag-chip').forEach(b => paintTag(b, false));
+            document.getElementById('reviewText').value = '';
+            document.getElementById('reviewError').classList.add('hidden');
+            document.getElementById('reviewBody').classList.remove('hidden');
+            document.getElementById('reviewThanks').classList.add('hidden');
+            document.getElementById('reviewName').textContent = lastOrder && lastOrder.name ? lastOrder.name : 'kak';
+            document.getElementById('reviewOrderId').textContent = lastOrder ? lastOrder.id : '';
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+        }
+
+        function setRating(n) {
+            reviewRating = n;
+            document.querySelectorAll('#reviewStars .star-btn').forEach((btn, i) => {
+                const on = i < n;
+                btn.classList.toggle('text-amber-400', on);
+                btn.classList.toggle('text-gray-300', !on);
+            });
+            document.getElementById('ratingLabel').textContent = RATING_TEXT[n] || '';
+            if (n) document.getElementById('reviewError').classList.add('hidden');
+        }
+
+        function paintTag(btn, on) {
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            btn.classList.toggle('bg-brand-orange', on);
+            btn.classList.toggle('text-white', on);
+            btn.classList.toggle('border-brand-orange', on);
+            btn.classList.toggle('bg-white', !on);
+            btn.classList.toggle('text-gray-700', !on);
+            btn.classList.toggle('border-yellow-300', !on);
+        }
+
+        function toggleTag(btn) {
+            paintTag(btn, btn.getAttribute('aria-pressed') !== 'true');
+        }
+
+        function submitReview() {
+            if (!lastOrder) { closeReviewModal(); return; }
+            if (!reviewRating) {
+                const err = document.getElementById('reviewError');
+                err.textContent = 'Pilih jumlah bintang dulu ya.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const tags = Array.from(document.querySelectorAll('#reviewTags .tag-chip[aria-pressed="true"]')).map(b => b.dataset.tag);
+            sendToSheet({
+                action: 'review',
+                orderId: lastOrder.id,
+                rating: reviewRating,
+                tags: tags,
+                komentar: document.getElementById('reviewText').value.trim()
+            });
+            document.getElementById('reviewBody').classList.add('hidden');
+            document.getElementById('reviewThanks').classList.remove('hidden');
+            setTimeout(closeReviewModal, 2200);
+        }
+
+        // Dipanggil setelah pesanan dikirim: kosongkan keranjang & form, lalu minta review
+        function finishOrder(orderId, custName) {
+            lastOrder = { id: orderId, name: custName };
+            cart = {};
+            updateCartUI();
+            renderMenu(getActiveCategory());
+
+            document.getElementById('custNotes').value = '';
+            document.getElementById('pickupTime').value = '';
+            document.querySelectorAll('input[name="payMethod"]').forEach(r => r.checked = false);
+            ['qrisPanel', 'cashPanel', 'timeBox'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('deliveryType').selectedIndex = 0;
+            onDeliveryChange();
+
+            document.getElementById('cartModal').classList.add('hidden');
+            openReviewModal();
+        }
+
         // SEND WHATSAPP FORMATTED MESSAGE
         function sendOrderToWhatsApp() {
             const custName = document.getElementById('custName').value.trim();
@@ -695,8 +919,10 @@
             if (!pickup) { alert('Pilih jam pengambilan pesanan.'); return; }
             if (pickup < '11:00' || pickup > '21:00') { alert('Jam harus antara 11.00 - 21.00 WIB.'); return; }
             const isTake = deliveryType.startsWith('Takeaway');
+            const orderId = makeOrderId();
 
             let message = `Halo *DIMPIK*! Saya mau pesan Dimsum:\n\n`;
+            message += `🧾 *No. Pesanan:* ${orderId}\n`;
             message += `👤 *Nama Pemesan:* ${custName}\n`;
             message += `🛵 *Metode:* ${deliveryType}\n`;
             message += `💳 *Pembayaran:* ${pay.value === 'QRIS' ? 'QRIS (bukti bayar menyusul)' : 'Cash (bayar langsung)'}\n`;
@@ -718,11 +944,33 @@
             message += `💰 *TOTAL PEMBAYARAN: Rp ${totalPrice.toLocaleString('id-ID')}*\n\n`;
             message += `Mohon konfirmasi pesanan dan info pembayarannya ya kak. Terima kasih! 😋✨`;
 
+            // Kirim pesanan ke Google Sheet (tab "Website")
+            sendToSheet({
+                action: 'order',
+                orderId: orderId,
+                nama: custName,
+                metode: deliveryType,
+                pembayaran: pay.value,
+                jam: pickup,
+                catatan: custNotes,
+                items: cartKeys.map(k => {
+                    const it = cart[k];
+                    return {
+                        menu: it.name,
+                        varian: variantOf(it.name),
+                        kategori: CATEGORY_LABELS[it.category] || it.category,
+                        qty: it.qty,
+                        harga: it.price
+                    };
+                })
+            });
+
             const phone = "6287743146842";
             const encodedMessage = encodeURIComponent(message);
             const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
 
             window.open(waUrl, '_blank');
+            finishOrder(orderId, custName);
         }
 
         function showToast(name) {
@@ -761,6 +1009,7 @@
         window.onload = function() {
             renderMenu.animate = true;
             renderMenu('isi4');
+            flushPending();
         }
     </script>
 </body>
