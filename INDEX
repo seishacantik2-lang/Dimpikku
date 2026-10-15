@@ -869,15 +869,13 @@
             pendingOrder = null;
             const tags = Array.from(document.querySelectorAll('#reviewTags .tag-chip[aria-pressed="true"]')).map(b => b.dataset.tag);
 
-            // Order dulu, lalu ulasan (antrean mengirim berurutan)
-            sendToSheet(o.payload);
-            sendToSheet({
-                action: 'review',
-                orderId: o.id,
+            // Satu request saja: order + rating + komentar dikirim bersamaan
+            // (Apps Script v3.3 sudah membaca rating & komentar dari payload order)
+            sendToSheet(Object.assign({}, o.payload, {
                 rating: reviewRating,
                 tags: tags,
                 komentar: document.getElementById('reviewText').value.trim()
-            });
+            }));
 
             // Buka WhatsApp langsung dari klik ini (supaya tidak diblokir popup blocker)
             window.open(o.waUrl, '_blank');
