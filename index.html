@@ -745,7 +745,7 @@
         // Tempel URL Web App dari Google Apps Script di bawah ini.
         // (Apps Script > Deploy > New deployment > Web app > salin URL yang berakhiran /exec)
         // =====================================================
-        const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwn-pOWze5Hu7tjz27hfcz4IPL0pP6rngw5Im2t0vVYTuALIHVMcsxcB7iXIMAYDHCM/exec';
+        const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxVtyLOgaMQH8OTD7g3s1AIjRMrbE5g18sCzTltnyrZVSPS9WiViQic1NjzRQC0ZV8Atw/exec';
 
         const CATEGORY_LABELS = {
             isi4: 'Dimsum Isi 4', isi6: 'Dimsum Isi 6', isi8: 'Dimsum Isi 8', isi16: 'Dimsum Isi 16',
@@ -768,10 +768,7 @@
         // data tetap tersimpan di browser dan dikirim ulang saat halaman dibuka / online lagi.
         const PENDING_KEY = 'dimpik_pending_posts';
         function loadPending() {
-            try {
-                const maxAge = 3 * 60 * 60 * 1000; // data antrean lebih dari 3 jam dibuang supaya pesanan uji lama tidak terkirim ulang
-                return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]').filter(x => x && x._t && Date.now() - x._t < maxAge);
-            } catch (e) { return []; }
+            try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
         }
         function savePending() {
             try { localStorage.setItem(PENDING_KEY, JSON.stringify(pendingQueue.slice(-30))); } catch (e) {}
@@ -784,7 +781,7 @@
                 console.warn('[Dimpik] SHEET_WEBHOOK_URL belum diisi, data tidak dikirim ke Google Sheet.');
                 return;
             }
-            pendingQueue.push(Object.assign({ _t: Date.now() }, data));
+            pendingQueue.push(data);
             savePending();
             flushPending();
         }
@@ -959,7 +956,6 @@
             // Data pesanan ditahan dulu; baru dikirim ke Google Sheet setelah ulasan diisi
             const orderPayload = {
                 action: 'order',
-                ts: Date.now(),
                 orderId: orderId,
                 nama: custName,
                 metode: deliveryType,
