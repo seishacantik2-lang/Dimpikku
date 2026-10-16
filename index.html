@@ -413,20 +413,28 @@
     </div>
 
     <!-- JACKPOT MODAL -->
-    <div id="jackpotModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="jpTitle">
-        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden text-center modal-pop border-4 border-brand-yellow">
-            <div class="bg-gradient-to-b from-brand-yellow to-amber-300 pt-6 pb-4 px-5">
-                <div class="text-5xl animate-bounce">🎉</div>
-                <h3 id="jpTitle" class="font-extrabold text-brand-dark text-2xl mt-1">JACKPOT DIMPIK!</h3>
+    <style>
+        @keyframes jpFall { 0% { transform: translateY(-20px) rotate(0); opacity: 1; } 100% { transform: translateY(105vh) rotate(540deg); opacity: .9; } }
+        .jp-confetti { position: fixed; top: -20px; z-index: 75; font-size: 22px; pointer-events: none; animation: jpFall linear forwards; }
+        @media (prefers-reduced-motion: reduce) { .jp-confetti { display: none; } }
+    </style>
+    <div id="jackpotModal" role="dialog" aria-modal="true" aria-labelledby="jpTitle" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-brand-dark w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border-4 border-brand-yellow modal-pop text-center">
+            <div class="px-6 pt-7 pb-2">
+                <div class="text-5xl mb-2" aria-hidden="true">🎁</div>
+                <h3 id="jpTitle" class="font-black text-brand-yellow text-3xl leading-tight">JACKPOT!</h3>
+                <p class="text-white font-extrabold text-lg mt-1">Selamat, <span id="jpName">kak</span>! 🎉</p>
             </div>
-            <div class="p-5 space-y-3">
-                <p class="text-sm text-gray-700">Selamat, <b id="jpName">kak</b>! 🥳 Pesananmu adalah <b>pesanan ke-<span id="jpNo"></span></b> di website Dimpik dan tepat kena angka jackpot!</p>
-                <div class="bg-amber-50 border-2 border-dashed border-brand-orange rounded-2xl p-4">
-                    <p class="text-[11px] font-extrabold uppercase tracking-wider text-brand-orangeDark">Hadiah kamu</p>
-                    <p id="jpPrize" class="font-extrabold text-brand-dark text-xl mt-1"></p>
+            <div class="px-6 pb-2">
+                <p class="text-sm text-gray-200 leading-relaxed">Pesananmu adalah <b class="text-white">pesanan ke-<span id="jpNo"></span></b> di DIMPIK dan terpilih jadi pemenang jackpot kami!</p>
+                <div class="bg-brand-yellow text-brand-dark rounded-2xl px-4 py-3 mt-4">
+                    <p class="text-xs font-bold">Hadiahmu</p>
+                    <p id="jpPrize" class="font-black text-xl leading-snug"></p>
                 </div>
-                <p class="text-xs text-gray-500">Sebutkan No. Pesanan <b id="jpOrderId"></b> ke admin saat pesanan diambil/diantar. Hadiah disiapkan bersama pesananmu!</p>
-                <button type="button" onclick="closeJackpotModal()" class="w-full bg-brand-orange hover:bg-brand-orangeDark text-white font-extrabold py-3 rounded-2xl text-sm shadow transition">Yeay, Tutup 🎉</button>
+                <p class="text-xs text-gray-300 mt-4">Tunjukkan layar ini atau sebutkan No. Pesanan <b id="jpOrderId" class="text-white"></b> ke admin saat pesananmu diambil atau diantar.</p>
+            </div>
+            <div class="p-5">
+                <button type="button" onclick="closeJackpot()" class="w-full bg-brand-orange hover:bg-brand-orangeDark text-white font-extrabold py-3 rounded-2xl text-sm transition">Tutup</button>
             </div>
         </div>
     </div>
@@ -764,7 +772,7 @@
         // Tempel URL Web App dari Google Apps Script di bawah ini.
         // (Apps Script > Deploy > New deployment > Web app > salin URL yang berakhiran /exec)
         // =====================================================
-        const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwCPz4h4obGOjgZkKaVRJoazuZAqagawXUurox8v1DucWOZlPC-tjH7p9bCKmA8cWVPnA/exec';
+        const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyQfThlSw7vtPCbHox1o9xJLUHSf1B5WbfPK6i9WIhlHlb3LFoautyLEsfAOriya4fR/exec';
 
         const CATEGORY_LABELS = {
             isi4: 'Dimsum Isi 4', isi6: 'Dimsum Isi 6', isi8: 'Dimsum Isi 8', isi16: 'Dimsum Isi 16',
@@ -828,41 +836,6 @@
         }
         window.addEventListener('online', flushPending);
 
-        // ---------- JACKPOT (nomor urut pesanan web = jumlah pesanan di Google Sheet) ----------
-        const ADMIN_PHONE = '6287743146842';
-        const JACKPOT_PRIZES = { 15: 'Chili Oil', 45: 'Dimsum Ori isi 2', 65: 'Chili Oil', 80: 'Dimsum Ori isi 4', 95: 'Chili Oil', 100: 'Chili Oil + Dimsum Ori isi 4 (gratis)' };
-
-        // Pola berulang tiap 100 pesanan: 115 -> posisi 15, 145 -> posisi 45, 200 -> posisi 100
-        function jackpotInfo(n) {
-            n = Number(n);
-            const prize = n ? (JACKPOT_PRIZES[((n - 1) % 100) + 1] || null) : null;
-            return { orderNo: n || null, prize: prize, line: prize ? `🎉 *Selamat! Hadiah Jackpot:* ${prize}` : '' };
-        }
-
-        // Kirim order ke Apps Script dan baca nomor urut pesanan dari balasannya.
-        // Jika jaringan gagal, order masuk antrean (dikirim ulang otomatis; Apps Script menolak duplikat).
-        async function postOrder(payload) {
-            if (!SHEET_WEBHOOK_URL) return null;
-            const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
-            try {
-                const r = await fetch(SHEET_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), signal: ctl.signal });
-                const txt = await r.text();
-                try { return JSON.parse(txt); } catch (e) { return null; }
-            } catch (e) {
-                sendToSheet(payload);
-                return null;
-            } finally { clearTimeout(timer); }
-        }
-
-        function openJackpotModal(jp, name, orderId) {
-            document.getElementById('jpName').textContent = name || 'kak';
-            document.getElementById('jpNo').textContent = jp.orderNo;
-            document.getElementById('jpPrize').textContent = '🎁 ' + jp.prize;
-            document.getElementById('jpOrderId').textContent = orderId;
-            document.getElementById('jackpotModal').classList.remove('hidden');
-        }
-        function closeJackpotModal() { document.getElementById('jackpotModal').classList.add('hidden'); }
-
         // ---------- REVIEW SETELAH PESANAN ----------
         let lastOrder = null;
         let pendingOrder = null;
@@ -911,6 +884,75 @@
             paintTag(btn, btn.getAttribute('aria-pressed') !== 'true');
         }
 
+        // ---------- JACKPOT ----------
+        // Nomor urut pesanan = jumlah pesanan unik di Google Sheet. Pola diulang tiap 100.
+        const JACKPOT_PRIZES = {
+            15: 'Chili Oil',
+            45: 'Dimsum Ori isi 2',
+            65: 'Chili Oil',
+            80: 'Dimsum Ori isi 4',
+            95: 'Chili Oil',
+            100: 'Chili Oil + Dimsum Ori isi 4 (gratis)'
+        };
+        function jackpotFor(n) {
+            if (!n) return '';
+            const k = n % 100 === 0 ? 100 : n % 100;   // 115 -> 15, 200 -> 100
+            return JACKPOT_PRIZES[k] || '';
+        }
+
+        // Kirim pesanan & baca balasan (nomor urut). Coba 2x; server menolak data dobel.
+        async function postOrderForResult(data) {
+            for (let t = 0; t < 2; t++) {
+                try {
+                    const ctrl = new AbortController();
+                    const timer = setTimeout(() => ctrl.abort(), 9000);
+                    const r = await fetch(SHEET_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(data),
+                        signal: ctrl.signal
+                    });
+                    clearTimeout(timer);
+                    const j = await r.json();
+                    if (j && j.ok) return j;
+                } catch (e) { /* coba lagi / jatuh ke antrean */ }
+            }
+            return null;
+        }
+
+        function buildWaUrl(o, orderNo, hadiah) {
+            let m = o.message;
+            if (orderNo) m += `🔢 *Urutan Pesanan:* ke-${orderNo}\n`;
+            if (!orderNo) m += `🎰 *Status Jackpot:* akan dicek admin\n\n`;
+            else if (hadiah) m += `🎰 *STATUS JACKPOT:* 🎉 YA! Hadiah: *${hadiah}*\n\n`;
+            else m += `🎰 *Status Jackpot:* belum kena jackpot\n\n`;
+            m += `Mohon konfirmasi pesanan dan info pembayarannya ya kak. Terima kasih! 😋✨`;
+            return `https://wa.me/6287743146842?text=${encodeURIComponent(m)}`;
+        }
+
+        function showJackpot(name, orderNo, hadiah, orderId) {
+            document.getElementById('jpName').textContent = name || 'kak';
+            document.getElementById('jpNo').textContent = orderNo;
+            document.getElementById('jpPrize').textContent = hadiah;
+            document.getElementById('jpOrderId').textContent = orderId;
+            document.getElementById('jackpotModal').classList.remove('hidden');
+            const em = ['🎉', '✨', '🥟', '🎊', '⭐'];
+            for (let i = 0; i < 24; i++) {
+                const s = document.createElement('span');
+                s.className = 'jp-confetti';
+                s.textContent = em[i % em.length];
+                s.style.left = (Math.random() * 100) + 'vw';
+                s.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
+                s.style.animationDelay = (Math.random() * 0.8) + 's';
+                document.body.appendChild(s);
+                setTimeout(() => s.remove(), 6000);
+            }
+        }
+        function closeJackpot() {
+            document.getElementById('jackpotModal').classList.add('hidden');
+        }
+
+        let submitting = false;
         async function submitReview() {
             if (!pendingOrder) { closeReviewModal(); return; }
             if (!reviewRating) {
@@ -919,37 +961,45 @@
                 err.classList.remove('hidden');
                 return;
             }
+            if (submitting) return;
+            submitting = true;
             const o = pendingOrder;
-            pendingOrder = null;
             const tags = Array.from(document.querySelectorAll('#reviewTags .tag-chip[aria-pressed="true"]')).map(b => b.dataset.tag);
-
             const payload = Object.assign({}, o.payload, {
                 rating: reviewRating,
                 tags: tags,
                 komentar: document.getElementById('reviewText').value.trim()
             });
 
-            // Tab WhatsApp dibuka SEKARANG (dari klik ini) agar tidak diblokir browser,
-            // lalu diarahkan ke chat admin setelah nomor urut pesanan diterima dari Google Sheet.
-            const waWin = window.open('', '_blank');
-            const btn = document.querySelector('#reviewModal button[onclick="submitReview()"]');
-            const btnHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.textContent = 'Memproses pesanan...';
+            const btn = document.querySelector('#reviewBody button[onclick="submitReview()"]');
+            const btnHtml = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Memproses pesanan...'; }
 
-            const res = await postOrder(payload);
-            const jp = jackpotInfo(res && res.orderNo);
-            const waUrl = 'https://wa.me/' + ADMIN_PHONE + '?text=' + encodeURIComponent(o.buildMessage(jp));
-            if (waWin) waWin.location.href = waUrl;
-            else if (!window.open(waUrl, '_blank')) window.location.href = waUrl;
+            // Buka tab sekarang (dari klik pengguna) supaya tidak diblokir; isinya diisi setelah ada hasil
+            const w = window.open('', '_blank');
 
-            btn.disabled = false;
-            btn.innerHTML = btnHtml;
-            document.getElementById('reviewBody').classList.add('hidden');
-            document.getElementById('reviewThanks').classList.remove('hidden');
+            const res = await postOrderForResult(payload);
+            if (!res) sendToSheet(payload);   // gagal: simpan di antrean, dikirim ulang otomatis
+
+            const orderNo = res ? Number(res.orderNo) || 0 : 0;
+            const hadiah = jackpotFor(orderNo);
+            const waUrl = buildWaUrl(o, orderNo, hadiah);
+
+            pendingOrder = null;
+            submitting = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = btnHtml; }
+
+            if (w) w.location.href = waUrl; else window.location.href = waUrl;
+
             finishOrder();
-            if (jp.prize) { closeReviewModal(); openJackpotModal(jp, o.name, o.id); }
-            else setTimeout(closeReviewModal, 2500);
+            if (hadiah) {
+                closeReviewModal();
+                showJackpot(o.name, orderNo, hadiah, o.id);
+            } else {
+                document.getElementById('reviewBody').classList.add('hidden');
+                document.getElementById('reviewThanks').classList.remove('hidden');
+                setTimeout(closeReviewModal, 2500);
+            }
         }
 
         // Dipanggil setelah ulasan terkirim: kosongkan keranjang & form
@@ -994,11 +1044,9 @@
             const isTake = deliveryType.startsWith('Takeaway');
             const orderId = makeOrderId();
 
-            const buildMessage = (jp) => {
-            let message = `🔔 *PESANAN BARU DARI WEBSITE – DIMPIK*\n\n`;
+            let message = `Halo *DIMPIK*! Saya mau pesan Dimsum:\n\n`;
             message += `🧾 *No. Pesanan:* ${orderId}\n`;
-            if (jp.line) message += `${jp.line}\n`;
-            message += `👤 *Nama Pelanggan:* ${custName}\n`;
+            message += `👤 *Nama Pemesan:* ${custName}\n`;
             message += `🛵 *Metode:* ${deliveryType}\n`;
             message += `💳 *Pembayaran:* ${pay.value === 'QRIS' ? 'QRIS (bukti bayar menyusul)' : 'Cash (bayar langsung)'}\n`;
             message += `⏰ *Jam ${isTake ? 'Ambil' : 'Antar'}:* ${pickup} WIB\n`;
@@ -1017,9 +1065,6 @@
 
             message += `-------------------------------\n`;
             message += `💰 *TOTAL PEMBAYARAN: Rp ${totalPrice.toLocaleString('id-ID')}*\n\n`;
-            message += `Mohon konfirmasi pesanan dan info pembayarannya ya kak. Terima kasih! 😋✨`;
-            return message;
-            };
 
             // Data pesanan ditahan dulu; baru dikirim ke Google Sheet setelah ulasan diisi
             const orderPayload = {
@@ -1042,7 +1087,8 @@
                 })
             };
 
-            pendingOrder = { id: orderId, name: custName, payload: orderPayload, buildMessage: buildMessage };
+            // Link WhatsApp dibuat setelah nomor urut & status jackpot diketahui (lihat buildWaUrl)
+            pendingOrder = { id: orderId, name: custName, payload: orderPayload, message: message };
             lastOrder = { id: orderId, name: custName };
             openReviewModal();
         }
