@@ -426,15 +426,15 @@
                 <p class="text-white font-extrabold text-lg mt-1">Selamat, <span id="jpName">kak</span>! 🎉</p>
             </div>
             <div class="px-6 pb-2">
-                <p class="text-sm text-gray-200 leading-relaxed">Pesananmu adalah <b class="text-white">pesanan ke-<span id="jpNo"></span></b> di DIMPIK dan terpilih jadi pemenang jackpot kami!</p>
-                <div class="bg-brand-yellow text-brand-dark rounded-2xl px-4 py-3 mt-4">
+                <p class="text-sm text-gray-200 leading-relaxed">Kamu terpilih jadi pemenang jackpot DIMPIK!</p>
+                <div class="bg-brand-yellow text-brand-dark rounded-2xl px-4 py-3 mt-3">
                     <p class="text-xs font-bold">Hadiahmu</p>
                     <p id="jpPrize" class="font-black text-xl leading-snug"></p>
                 </div>
-                <p class="text-xs text-gray-300 mt-4">Tunjukkan layar ini atau sebutkan No. Pesanan <b id="jpOrderId" class="text-white"></b> ke admin saat pesananmu diambil atau diantar.</p>
+                
             </div>
             <div class="p-5">
-                <button type="button" onclick="closeJackpot()" class="w-full bg-brand-orange hover:bg-brand-orangeDark text-white font-extrabold py-3 rounded-2xl text-sm transition">Tutup</button>
+                <button type="button" onclick="closeJackpot()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-2xl text-sm transition">Lanjut ke WhatsApp</button>
             </div>
         </div>
     </div>
@@ -765,6 +765,7 @@
         function toggleCartModal() {
             const modal = document.getElementById('cartModal');
             modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) warmUp();
         }
 
         // =====================================================
@@ -900,23 +901,30 @@
             return JACKPOT_PRIZES[k] || '';
         }
 
-        // Kirim pesanan & baca balasan (nomor urut). Coba 2x; server menolak data dobel.
+        // Bangunkan Apps Script lebih awal (cold start bisa 3-6 detik) supaya kirim pesanan terasa cepat
+        let warmed = 0;
+        function warmUp() {
+            if (!SHEET_WEBHOOK_URL || Date.now() - warmed < 4 * 60 * 1000) return;
+            warmed = Date.now();
+            try { fetch(SHEET_WEBHOOK_URL + '?ping=1', { mode: 'no-cors', keepalive: true }).catch(() => {}); } catch (e) {}
+        }
+
+        // Kirim pesanan & baca balasan (nomor urut). Satu kali coba (maks 8 dtk); server menolak data dobel,
+        // kalau gagal pesanan masuk antrean dan dikirim ulang otomatis.
         async function postOrderForResult(data) {
-            for (let t = 0; t < 2; t++) {
-                try {
-                    const ctrl = new AbortController();
-                    const timer = setTimeout(() => ctrl.abort(), 9000);
-                    const r = await fetch(SHEET_WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(data),
-                        signal: ctrl.signal
-                    });
-                    clearTimeout(timer);
-                    const j = await r.json();
-                    if (j && j.ok) return j;
-                } catch (e) { /* coba lagi / jatuh ke antrean */ }
-            }
+            try {
+                const ctrl = new AbortController();
+                const timer = setTimeout(() => ctrl.abort(), 8000);
+                const r = await fetch(SHEET_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(data),
+                    signal: ctrl.signal
+                });
+                clearTimeout(timer);
+                const j = await r.json();
+                if (j && j.ok) return j;
+            } catch (e) { /* jatuh ke antrean */ }
             return null;
         }
 
@@ -927,14 +935,14 @@
             else if (hadiah) m += `🎰 *STATUS JACKPOT:* 🎉 YA! Hadiah: *${hadiah}*\n\n`;
             else m += `🎰 *Status Jackpot:* belum kena jackpot\n\n`;
             m += `Mohon konfirmasi pesanan dan info pembayarannya ya kak. Terima kasih! 😋✨`;
-            return `https://wa.me/6287743146842?text=${encodeURIComponent(m)}`;
+            return `https://api.whatsapp.com/send/?phone=6287743146842&text=${encodeURIComponent(m)}&type=phone_number&app_absent=0`;
         }
 
-        function showJackpot(name, orderNo, hadiah, orderId) {
+        let nextWaUrl = '';
+        function goWhatsApp(url) { if (url) window.location.href = url; }
+        function showJackpot(name, hadiah) {
             document.getElementById('jpName').textContent = name || 'kak';
-            document.getElementById('jpNo').textContent = orderNo;
             document.getElementById('jpPrize').textContent = hadiah;
-            document.getElementById('jpOrderId').textContent = orderId;
             document.getElementById('jackpotModal').classList.remove('hidden');
             const em = ['🎉', '✨', '🥟', '🎊', '⭐'];
             for (let i = 0; i < 24; i++) {
@@ -950,6 +958,8 @@
         }
         function closeJackpot() {
             document.getElementById('jackpotModal').classList.add('hidden');
+            const u = nextWaUrl; nextWaUrl = '';
+            goWhatsApp(u);   // dari klik tombol, jadi tidak diblokir browser
         }
 
         let submitting = false;
@@ -975,9 +985,6 @@
             const btnHtml = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.textContent = 'Memproses pesanan...'; }
 
-            // Buka tab sekarang (dari klik pengguna) supaya tidak diblokir; isinya diisi setelah ada hasil
-            const w = window.open('', '_blank');
-
             const res = await postOrderForResult(payload);
             if (!res) sendToSheet(payload);   // gagal: simpan di antrean, dikirim ulang otomatis
 
@@ -989,16 +996,16 @@
             submitting = false;
             if (btn) { btn.disabled = false; btn.innerHTML = btnHtml; }
 
-            if (w) w.location.href = waUrl; else window.location.href = waUrl;
-
             finishOrder();
             if (hadiah) {
+                // Jackpot tampil dulu; WhatsApp dibuka setelah tombol "Lanjut ke WhatsApp" ditekan
+                nextWaUrl = waUrl;
                 closeReviewModal();
-                showJackpot(o.name, orderNo, hadiah, o.id);
+                showJackpot(o.name, hadiah);
             } else {
                 document.getElementById('reviewBody').classList.add('hidden');
                 document.getElementById('reviewThanks').classList.remove('hidden');
-                setTimeout(closeReviewModal, 2500);
+                setTimeout(() => { closeReviewModal(); goWhatsApp(waUrl); }, 900);
             }
         }
 
@@ -1020,6 +1027,7 @@
 
         // SEND WHATSAPP FORMATTED MESSAGE
         function sendOrderToWhatsApp() {
+            warmUp();
             const custName = document.getElementById('custName').value.trim();
             const deliveryType = document.getElementById('deliveryType').value;
             const custNotes = document.getElementById('custNotes').value.trim();
@@ -1130,6 +1138,7 @@
             renderMenu.animate = true;
             renderMenu('isi4');
             flushPending();
+            warmUp();
         }
     </script>
 </body>
